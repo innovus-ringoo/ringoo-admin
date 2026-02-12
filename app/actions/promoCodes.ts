@@ -2,12 +2,14 @@
 
 import { createPromoCode, updatePromoCode, deletePromoCode } from '../services/database';
 import { CreatePromoCodeRequest, PromoCode } from '../types';
+import { checkAdminRoleServer } from '../lib/auth-server';
 
 export async function createPromoCodeAction(
   prevState: { success: boolean; error: string; data: PromoCode | null },
   data: CreatePromoCodeRequest
 ) {
   try {
+    await checkAdminRoleServer();
     const newPromoCode = await createPromoCode({
       ...data,
       validFrom: data.validFrom,
@@ -15,7 +17,7 @@ export async function createPromoCodeAction(
     });
     return { success: true, data: newPromoCode, error: '' };
   } catch (error) {
-    return { success: false, error: 'Failed to create promo code', data: null };
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to create promo code', data: null };
   }
 }
 
@@ -24,13 +26,14 @@ export async function updatePromoCodeAction(
   payload: { id: string; data: Partial<CreatePromoCodeRequest> }
 ) {
   try {
+    await checkAdminRoleServer();
     const updatedPromoCode = await updatePromoCode(payload.id, payload.data);
     if (!updatedPromoCode) {
       return { success: false, error: 'Promo code not found', data: null };
     }
     return { success: true, data: updatedPromoCode, error: '' };
   } catch (error) {
-    return { success: false, error: 'Failed to update promo code', data: null };
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to update promo code', data: null };
   }
 }
 
@@ -39,12 +42,13 @@ export async function deletePromoCodeAction(
   id: string
 ) {
   try {
+    await checkAdminRoleServer();
     const deleted = await deletePromoCode(id);
     if (!deleted) {
       return { success: false, error: 'Promo code not found', data: null };
     }
     return { success: true, message: 'Promo code deleted successfully', data: null };
   } catch (error) {
-    return { success: false, error: 'Failed to delete promo code', data: null };
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to delete promo code', data: null };
   }
 }

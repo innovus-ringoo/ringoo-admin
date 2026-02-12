@@ -1,6 +1,45 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { 
+  getReportsStatisticsAction, 
+  getPromoCodeUsageTrendAction,
+  ReportsStatistics,
+  UsageTrend
+} from '../../actions/reports';
+
 export default function ReportsPage() {
+  const [statistics, setStatistics] = useState<ReportsStatistics | null>(null);
+  const [usageTrend, setUsageTrend] = useState<UsageTrend[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [stats, trend] = await Promise.all([
+          getReportsStatisticsAction(),
+          getPromoCodeUsageTrendAction()
+        ]);
+        setStatistics(stats);
+        setUsageTrend(trend);
+      } catch (error) {
+        console.error('Failed to fetch reports data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-gray-500">Loading reports data...</div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex justify-between items-center mb-6">
@@ -15,7 +54,7 @@ export default function ReportsPage() {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-sm text-gray-600">Total Promo Codes</p>
-              <p className="text-2xl font-bold text-gray-800">15</p>
+              <p className="text-2xl font-bold text-gray-800">{statistics?.totalPromoCodes}</p>
             </div>
             <div className="bg-[#2A93FF]/10 rounded-full p-3">
               <svg className="w-6 h-6 text-[#2A93FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -30,7 +69,7 @@ export default function ReportsPage() {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-sm text-gray-600">Total Agencies</p>
-              <p className="text-2xl font-bold text-gray-800">8</p>
+              <p className="text-2xl font-bold text-gray-800">{statistics?.totalAgencies}</p>
             </div>
             <div className="bg-green-100 rounded-full p-3">
               <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,7 +84,7 @@ export default function ReportsPage() {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-sm text-gray-600">Total Discounts</p>
-              <p className="text-2xl font-bold text-gray-800">$1,245</p>
+              <p className="text-2xl font-bold text-gray-800">${statistics?.totalDiscount.toFixed(2)}</p>
             </div>
             <div className="bg-yellow-100 rounded-full p-3">
               <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,7 +99,7 @@ export default function ReportsPage() {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-sm text-gray-600">Total Commissions</p>
-              <p className="text-2xl font-bold text-gray-800">$892</p>
+              <p className="text-2xl font-bold text-gray-800">${statistics?.totalCommission.toFixed(2)}</p>
             </div>
             <div className="bg-purple-100 rounded-full p-3">
               <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,6 +128,72 @@ export default function ReportsPage() {
           <div className="h-64 bg-gray-50 flex items-center justify-center">
             <p className="text-gray-500">Chart placeholder</p>
           </div>
+        </div>
+      </div>
+
+      {/* Usage Breakdown Table */}
+      <div className="mt-8 border border-gray-100 rounded-lg">
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="text-lg font-medium text-gray-900">Usage Breakdown</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Promo Code</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Type</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Usage Count</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Total Discount</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Total Commission</th>
+              </tr>
+            </thead>
+            <tbody>
+              {statistics?.usageByType.map((usage) => (
+                <tr key={usage._id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-3">{usage._id}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                      usage._id === 'user' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {usage._id}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">{usage.count}</td>
+                  <td className="px-4 py-3">${usage.totalDiscount.toFixed(2)}</td>
+                  <td className="px-4 py-3">${usage.totalCommission.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Top Agencies Table */}
+      <div className="mt-8 border border-gray-100 rounded-lg">
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="text-lg font-medium text-gray-900">Top Agencies</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Agency</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Referral Count</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Total Discount</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Total Commission</th>
+              </tr>
+            </thead>
+            <tbody>
+              {statistics?.topAgencies.map((agency) => (
+                <tr key={agency.agencyId} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium">{agency.agencyName}</td>
+                  <td className="px-4 py-3">{agency.referralCount}</td>
+                  <td className="px-4 py-3">${agency.totalDiscount.toFixed(2)}</td>
+                  <td className="px-4 py-3">${agency.totalCommission.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </>

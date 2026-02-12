@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAgencies, createAgency, updateAgency, getAgencyById, getAgencyDashboard } from '../../../services/database';
 import { CreateAgencyRequest } from '../../../types';
+import { checkAdminRole } from '../../../lib/auth';
 
 export async function GET(request: NextRequest) {
+  const checkResult = await checkAdminRole(request);
+  if (!checkResult.authorized) {
+    return NextResponse.json({ error: checkResult.error }, { status: checkResult.status });
+  }
+
   try {
     const agencies = await getAgencies();
     return NextResponse.json(agencies);
@@ -15,6 +21,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const checkResult = await checkAdminRole(request);
+  if (!checkResult.authorized) {
+    return NextResponse.json({ error: checkResult.error }, { status: checkResult.status });
+  }
+
   try {
     const agencyData: CreateAgencyRequest = await request.json();
     const newAgency = await createAgency(agencyData);
@@ -28,6 +39,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const checkResult = await checkAdminRole(request);
+  if (!checkResult.authorized) {
+    return NextResponse.json({ error: checkResult.error }, { status: checkResult.status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

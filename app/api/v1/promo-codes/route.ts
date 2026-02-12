@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPromoCodes, createPromoCode, updatePromoCode, deletePromoCode, getPromoCodeById } from '../../../services/database';
 import { CreatePromoCodeRequest } from '../../../types';
+import { checkAdminRole } from '../../../lib/auth';
 
 export async function GET(request: NextRequest) {
+  const checkResult = await checkAdminRole(request);
+  if (!checkResult.authorized) {
+    return NextResponse.json({ error: checkResult.error }, { status: checkResult.status });
+  }
+
   try {
     const promoCodes = await getPromoCodes();
     return NextResponse.json(promoCodes);
@@ -15,6 +21,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const checkResult = await checkAdminRole(request);
+  if (!checkResult.authorized) {
+    return NextResponse.json({ error: checkResult.error }, { status: checkResult.status });
+  }
+
   try {
     const promoCodeData: CreatePromoCodeRequest = await request.json();
     const newPromoCode = await createPromoCode({
@@ -32,6 +43,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const checkResult = await checkAdminRole(request);
+  if (!checkResult.authorized) {
+    return NextResponse.json({ error: checkResult.error }, { status: checkResult.status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -61,6 +77,11 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const checkResult = await checkAdminRole(request);
+  if (!checkResult.authorized) {
+    return NextResponse.json({ error: checkResult.error }, { status: checkResult.status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

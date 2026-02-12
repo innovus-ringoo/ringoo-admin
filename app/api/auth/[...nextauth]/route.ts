@@ -1,10 +1,11 @@
-import NextAuth, { type DefaultSession } from "next-auth";
+import NextAuth, { type DefaultSession, type Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
+import type { Account, Profile } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { getDatabase } from "@/app/lib/mongodb";
 
-interface User {
+interface MongoUser {
   _id: string;
   username: string;
   email: string;
@@ -12,6 +13,7 @@ interface User {
   phone_number?: string;
   created_at: Date;
   updated_at: Date;
+  role?: string;
 }
 
 declare module "next-auth" {
@@ -64,7 +66,7 @@ export const authOptions = {
           const db = await getDatabase();
           console.log('Database connected');
           
-          const user = await db.collection<User>('users').findOne({ email: credentials.email });
+          const user = await db.collection<MongoUser>('users').findOne({ email: credentials.email });
           console.log('User found:', user);
 
           if (!user) {
@@ -81,12 +83,16 @@ export const authOptions = {
           }
 
           console.log('Authorization successful');
+          // For your email (rkastew@gmail.com), explicitly set as admin
+          const userRole = user.email === 'rkastew@gmail.com' ? 'admin' : (user.role || 'user');
+          console.log('User role:', userRole);
+          
           return {
             id: user._id.toString(),
             email: user.email,
             name: user.username,
             phone_number: user.phone_number,
-            role: 'user',
+            role: userRole,
           };
         } catch (error) {
           console.error('Authorization error:', error);
@@ -100,17 +106,25 @@ export const authOptions = {
     maxAge: 36000, // 10 hours
   },
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: any }) {
+    async jwt({ token, user }: { 
+      token: JWT; 
+      user?: import("next-auth").User | import("next-auth/adapters").AdapterUser; 
+      account?: Account | null; 
+      profile?: Profile | undefined; 
+      trigger?: "signIn" | "signUp" | "update" | undefined; 
+      isNewUser?: boolean | undefined;
+      session?: Session;
+    }) {
       if (user) {
         token.id = user.id;
         token.name = user.name;
         token.email = user.email;
         token.phone_number = user.phone_number;
-        token.role = user.role;
+        token.role = user.role || 'user';
       }
       return token;
     },
-    async session({ session, token }: { session: any; token: JWT }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user) {
         session.user.id = token.id;
         session.user.name = token.name;

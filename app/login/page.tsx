@@ -15,7 +15,9 @@ export default function LoginPage() {
   // Check for error from callback
   useEffect(() => {
     const errorParam = searchParams.get('error');
-    if (errorParam) {
+    if (errorParam === 'unauthorized') {
+      setError('You do not have admin access to this system');
+    } else if (errorParam) {
       setError('Invalid email or password');
     }
   }, [searchParams]);

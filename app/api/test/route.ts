@@ -4,27 +4,26 @@ import { getDatabase } from '@/app/lib/mongodb';
 export async function GET(request: NextRequest) {
   try {
     const db = await getDatabase();
-    console.log('Database connected successfully');
+    const users = await db.collection('users').find({}).limit(5).toArray();
+    console.log('Users found:', users);
     
-    // Check if users collection exists and has documents
-    const usersCollection = db.collection('users');
-    const usersCount = await usersCollection.countDocuments();
-    const sampleUser = await usersCollection.findOne({});
-    
-    console.log(`Users count: ${usersCount}`);
-    console.log('Sample user:', sampleUser);
-    
-    return NextResponse.json({
-      success: true,
-      usersCount,
-      sampleUser,
-      message: 'MongoDB connection test successful'
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Database connection test successful',
+      users: users.map(user => ({
+        id: user._id.toString(),
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        createdAt: user.created_at
+      }))
     });
   } catch (error) {
-    console.error('Error testing MongoDB connection:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+    console.error('Database connection test error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Database connection failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
