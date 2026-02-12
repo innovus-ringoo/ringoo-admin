@@ -50,6 +50,16 @@ export default function Sidebar() {
         >
           Reports
         </Link>
+        <Link
+          href="/dashboard/users"
+          className={`block px-6 py-3 text-sm font-medium transition-colors ${
+            isActive('/dashboard/users') 
+              ? 'bg-blue-600 text-white' 
+              : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+          }`}
+        >
+          Users
+        </Link>
       </nav>
 
       <div className="absolute bottom-6 left-0 right-0 px-6">

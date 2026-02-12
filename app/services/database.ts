@@ -4,13 +4,17 @@ import {
   Agency,
   AgencyCommission,
   PromoCode,
-  PromoCodeUsage
+  PromoCodeUsage,
+  User,
+  MongoDBUser,
+  MongoDBUserQuery
 } from '../types';
 
 // Collection names
 const PROMO_CODES_COLLECTION = 'promo_codes';
 const PROMO_CODE_USAGES_COLLECTION = 'promo_code_usages';
 const AGENCIES_COLLECTION = 'agencies';
+const USERS_COLLECTION = 'users';
 const AGENCY_COMMISSIONS_COLLECTION = 'agency_commissions';
 
 // Promo Code Operations
@@ -232,14 +236,14 @@ export const getPromoCodeUsages = async (promoCodeId: string): Promise<PromoCode
   
   // Convert database fields to TypeScript interface fields
   return usages.map(usage => ({
-    id: (usage as any)._id.toString(),
-    promoCodeId: (usage as any).promo_code_id.toString(),
-    userId: (usage as any).user_id.toString(),
-    numberId: (usage as any).number_id.toString(),
-    discountAmount: (usage as any).discount_amount,
-    originalPrice: (usage as any).original_price,
-    finalPrice: (usage as any).final_price,
-    usedAt: (usage as any).used_at.toISOString(),
+    id: (usage)._id.toString(),
+    promoCodeId: (usage).promo_code_id.toString(),
+    userId: (usage).user_id.toString(),
+    numberId: (usage).number_id.toString(),
+    discountAmount: (usage).discount_amount,
+    originalPrice: (usage).original_price,
+    finalPrice: (usage).final_price,
+    usedAt: (usage).used_at.toISOString(),
   }));
 };
 
@@ -394,5 +398,56 @@ export const getAgencyDashboard = async (agencyId: string): Promise<Agency & { c
       const { _id, ...cleanCommission } = commission;
       return cleanCommission as AgencyCommission;
     }),
+  };
+};
+
+export const getUsers = async (limit: number = 10, cursor?: string, search?: string): Promise<{ users: User[]; nextCursor?: string; hasNext: boolean }> => {
+  const db = await getDatabase();
+  
+  const query: MongoDBUserQuery = {};
+  
+  if (search) {
+    const searchPattern = new RegExp(search, 'i');
+    query.$or = [
+      { username: searchPattern },
+      { email: searchPattern },
+      { _id: searchPattern }, // Allow searching by id (partial match)
+    ];
+  }
+  
+  if (cursor) {
+    try {
+      query._id = { ...query._id, $gt: new ObjectId(cursor) };
+    } catch (error) {
+      console.error('Invalid cursor:', error);
+    }
+  }
+  
+  const users = await db.collection<MongoDBUser>(USERS_COLLECTION)
+    .find(query)
+    .sort({ _id: 1 })
+    .limit(limit + 1)
+    .toArray();
+  
+  const hasNext = users.length > limit;
+  const usersToReturn = hasNext ? users.slice(0, limit) : users;
+  const nextCursor = hasNext ? usersToReturn[usersToReturn.length - 1]._id.toString() : undefined;
+  
+  return {
+    users: usersToReturn.map(user => {
+      return {
+        id: user._id.toString(),
+        email: user.email || '',
+        name: user.username || '',
+        phone: user.phone_number || '',
+        status: 'active', // Default status
+        createdAt: user.created_at ? String(user.created_at) : '',
+        updatedAt: user.updated_at ? String(user.updated_at) : '',
+        lastLogin: '', // Not available in current data structure
+        isAdmin: user.role === 'admin',
+      };
+    }),
+    nextCursor,
+    hasNext,
   };
 };

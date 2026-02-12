@@ -136,3 +136,44 @@ export interface ApplyPromoCodeResponse {
   finalPrice?: number;
   commissionAmount?: number;
 }
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  phone?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  lastLogin?: string;
+  isAdmin?: boolean;
+}
+
+// Represents the MongoDB user document structure
+export interface MongoDBUser {
+  _id: ObjectId;
+  email: string;
+  username: string;
+  phone_number?: string;
+  role?: string;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+// Represents a MongoDB query for MongoDBUser
+export type MongoDBUserQuery = Partial<{
+  _id: ObjectId | { $gt: ObjectId };
+  username: RegExp;
+  email: RegExp;
+  $or: Array<{
+    username?: RegExp;
+    email?: RegExp;
+    _id?: RegExp;
+  }>;
+}>;
+
+export interface UserListResponse {
+  users: User[];
+  nextCursor?: string;
+  hasNext: boolean;
+}
