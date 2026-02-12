@@ -27,7 +27,7 @@ jobs:
 
       # 4️⃣ Install dependencies
       - name: Install dependencies
-        run: pnpm ci
+        run: pnpm install --frozen-lockfile
 
       # 5️⃣ Build Next.js
       - name: Build project
