@@ -1,5 +1,4 @@
 import { getDatabase } from '../lib/mongodb';
-import { PromoCode, Agency, PromoCodeUsage } from '../types';
 
 // Collection names
 const PROMO_CODES_COLLECTION = 'promo_codes';
@@ -21,8 +20,8 @@ export const getReportsStatistics = async () => {
     {
       $group: {
         _id: null,
-        totalDiscount: { $sum: '$discountAmount' },
-        totalCommission: { $sum: '$commissionAmount' }
+        totalDiscount: { $sum: '$discount_amount' },
+        totalCommission: { $sum: '$commission_amount' }
       }
     }
   ]).toArray();
@@ -34,8 +33,8 @@ export const getReportsStatistics = async () => {
     {
       $lookup: {
         from: PROMO_CODES_COLLECTION,
-        localField: 'promoCodeId',
-        foreignField: 'id',
+        localField: 'promo_code_id',
+        foreignField: '_id',
         as: 'promoCode'
       }
     },
@@ -46,8 +45,8 @@ export const getReportsStatistics = async () => {
       $group: {
         _id: '$promoCode.type',
         count: { $sum: 1 },
-        totalDiscount: { $sum: '$discountAmount' },
-        totalCommission: { $sum: '$commissionAmount' }
+        totalDiscount: { $sum: '$discount_amount' },
+        totalCommission: { $sum: '$commission_amount' }
       }
     }
   ]).toArray();
@@ -57,8 +56,8 @@ export const getReportsStatistics = async () => {
     {
       $lookup: {
         from: PROMO_CODES_COLLECTION,
-        localField: 'promoCodeId',
-        foreignField: 'id',
+        localField: 'promo_code_id',
+        foreignField: '_id',
         as: 'promoCode'
       }
     },
@@ -74,8 +73,8 @@ export const getReportsStatistics = async () => {
       $group: {
         _id: '$promoCode.agencyId',
         count: { $sum: 1 },
-        totalDiscount: { $sum: '$discountAmount' },
-        totalCommission: { $sum: '$commissionAmount' }
+        totalDiscount: { $sum: '$discount_amount' },
+        totalCommission: { $sum: '$commission_amount' }
       }
     },
     {
@@ -88,7 +87,7 @@ export const getReportsStatistics = async () => {
       $lookup: {
         from: AGENCIES_COLLECTION,
         localField: '_id',
-        foreignField: 'id',
+        foreignField: '_id',
         as: 'agency'
       }
     },
@@ -126,18 +125,18 @@ export const getPromoCodeUsageTrend = async () => {
   const trend = await db.collection(PROMO_CODE_USAGES_COLLECTION).aggregate([
     {
       $match: {
-        usedAt: {
-          $gte: thirtyDaysAgo.toISOString(),
-          $lte: now.toISOString()
+        used_at: {
+          $gte: thirtyDaysAgo,
+          $lte: now
         }
       }
     },
     {
       $group: {
-        _id: { $dateToString: { format: '%Y-%m-%d', date: { $toDate: '$usedAt' } } },
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$used_at' } },
         count: { $sum: 1 },
-        totalDiscount: { $sum: '$discountAmount' },
-        totalCommission: { $sum: '$commissionAmount' }
+        totalDiscount: { $sum: '$discount_amount' },
+        totalCommission: { $sum: '$commission_amount' }
       }
     },
     {

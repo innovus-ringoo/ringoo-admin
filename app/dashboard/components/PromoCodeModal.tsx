@@ -101,7 +101,7 @@ export default function PromoCodeModal({ mode, promoCode }: PromoCodeModalProps)
       description: formData.get('description') as string || undefined,
     };
     
-    return updatePromoCodeAction(prevState, { id: promoCode.id, data });
+    return updatePromoCodeAction(prevState, { id: promoCode.id!, data });
   };
 
   const [state, dispatch] = useActionState<FormState, FormData>(
@@ -307,7 +307,7 @@ export default function PromoCodeModal({ mode, promoCode }: PromoCodeModalProps)
               <select
                 name="agencyId"
                 required
-                defaultValue={promoCode?.agencyId}
+                defaultValue={promoCode?.agencyId ? String(promoCode.agencyId) : ''}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2A93FF] focus:border-transparent"
               >
                 <option value="">Select an agency</option>

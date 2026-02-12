@@ -1,12 +1,12 @@
-import { PromoCode, ValidatePromoCodeRequest, ValidatePromoCodeResponse, ApplyPromoCodeRequest, ApplyPromoCodeResponse } from '../types';
-import { 
-  getPromoCodeByCode, 
-  getPromoCodeUsages, 
-  createPromoCodeUsage, 
-  updatePromoCode, 
+import { ObjectId } from 'mongodb';
+import { ApplyPromoCodeRequest, ApplyPromoCodeResponse, PromoCode, ValidatePromoCodeRequest, ValidatePromoCodeResponse } from '../types';
+import {
+  createPromoCodeUsage,
   getAgencyById,
+  getPromoCodeByCode,
+  getPromoCodeUsages,
   updateAgency,
-  getAgencyDashboard
+  updatePromoCode
 } from './database';
 
 // Validate promo code
@@ -29,9 +29,38 @@ export const validatePromoCode = async (req: ValidatePromoCodeRequest): Promise<
     };
   }
 
-  // Check validity dates
+  // Check validity dates (ensure all comparisons are in UTC)
   const now = new Date();
-  if (now < new Date(promoCode.validFrom) || now > new Date(promoCode.validUntil)) {
+  const nowUTC = new Date(Date.UTC(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds()
+  ));
+  
+  const validFrom = new Date(promoCode.validFrom);
+  const validFromUTC = new Date(Date.UTC(
+    validFrom.getFullYear(),
+    validFrom.getMonth(),
+    validFrom.getDate(),
+    validFrom.getHours(),
+    validFrom.getMinutes(),
+    validFrom.getSeconds()
+  ));
+  
+  const validUntil = new Date(promoCode.validUntil);
+  const validUntilUTC = new Date(Date.UTC(
+    validUntil.getFullYear(),
+    validUntil.getMonth(),
+    validUntil.getDate(),
+    validUntil.getHours(),
+    validUntil.getMinutes(),
+    validUntil.getSeconds()
+  ));
+  
+  if (nowUTC < validFromUTC || nowUTC > validUntilUTC) {
     return {
       valid: false,
       error: 'Promo code has expired or is not yet valid',
@@ -47,7 +76,7 @@ export const validatePromoCode = async (req: ValidatePromoCodeRequest): Promise<
   }
 
   // Check per user usage limit
-  if (userId && promoCode.usageLimitPerUser && promoCode.usageLimitPerUser > 0) {
+  if (userId && promoCode.usageLimitPerUser && promoCode.usageLimitPerUser > 0 && promoCode.id) {
     const usages = await getPromoCodeUsages(promoCode.id);
     const userUsageCount = usages.filter(usage => usage.userId === userId).length;
     if (userUsageCount >= promoCode.usageLimitPerUser) {
@@ -118,16 +147,22 @@ export const applyPromoCode = async (req: ApplyPromoCodeRequest): Promise<ApplyP
     agencyId: promoCode.agencyId,
   });
 
-  // Update promo code usage count
-  await updatePromoCode(promoCode.id, {
-    usageCount: promoCode.usageCount + 1,
-  });
+  // Update promo code usage count to match actual count in database
+  if (promoCode.id) {
+    const actualUsageCount = await getPromoCodeUsages(promoCode.id).then(usages => usages.length);
+    await updatePromoCode(promoCode.id, {
+      usageCount: actualUsageCount,
+    });
+  }
 
   // Update agency referral count and earnings
   if (promoCode.type === 'agency' && promoCode.agencyId) {
-    const agency = await getAgencyById(promoCode.agencyId);
+    const agencyId = promoCode.agencyId instanceof ObjectId 
+      ? promoCode.agencyId.toString() 
+      : (promoCode.agencyId as string);
+    const agency = await getAgencyById(agencyId);
     if (agency) {
-      await updateAgency(promoCode.agencyId, {
+      await updateAgency(agencyId, {
         totalReferrals: agency.totalReferrals + 1,
         totalEarnings: agency.totalEarnings + commissionAmount,
         pendingPayout: agency.pendingPayout + commissionAmount,

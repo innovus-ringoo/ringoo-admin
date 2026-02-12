@@ -64,7 +64,7 @@ export default function AgencyModal({ mode, agency }: AgencyModalProps) {
       bankDetails: formData.get('bankDetails') as string || undefined,
     };
     
-    return updateAgencyAction(prevState, { id: agency.id, data });
+    return updateAgencyAction(prevState, { id: agency.id!, data });
   };
 
   const [state, dispatch] = useActionState<FormState, FormData>(

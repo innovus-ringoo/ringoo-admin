@@ -66,8 +66,16 @@ export const authOptions = {
           const db = await getDatabase();
           console.log('Database connected');
           
+          // Log collections in database
+          const collections = await db.listCollections().toArray();
+          console.log('Collections in database:', collections.map(c => c.name));
+          
           const user = await db.collection<MongoUser>('users').findOne({ email: credentials.email });
           console.log('User found:', user);
+          
+          // Log all users in the collection
+          const allUsers = await db.collection<MongoUser>('users').find({}).toArray();
+          console.log('All users in collection:', allUsers);
 
           if (!user) {
             console.log('User not found');

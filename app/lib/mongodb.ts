@@ -1,4 +1,4 @@
-import { MongoClient, MongoClientOptions } from 'mongodb';
+import { MongoClient } from 'mongodb';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://innovusllc024_db_user:zme9!9giz!MzFtu@ringoo.uc4u6ld.mongodb.net/';
 const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'dev';
@@ -37,5 +37,7 @@ export async function getMongoClient() {
 
 export async function getDatabase() {
   const client = await getMongoClient();
-  return client.db(MONGODB_DATABASE);
+  const db = client.db(MONGODB_DATABASE);
+  console.log('Using database:', MONGODB_DATABASE);
+  return db;
 }

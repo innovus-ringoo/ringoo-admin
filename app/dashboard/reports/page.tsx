@@ -7,6 +7,18 @@ import {
   ReportsStatistics,
   UsageTrend
 } from '../../actions/reports';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from 'recharts';
 
 export default function ReportsPage() {
   const [statistics, setStatistics] = useState<ReportsStatistics | null>(null);
@@ -114,10 +126,59 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="border border-gray-100 rounded-lg">
           <div className="p-4 border-b border-gray-100">
-            <h2 className="text-lg font-medium text-gray-900">Promo Code Usage</h2>
+            <h2 className="text-lg font-medium text-gray-900">Promo Code Usage Trend</h2>
           </div>
-          <div className="h-64 bg-gray-50 flex items-center justify-center">
-            <p className="text-gray-500">Chart placeholder</p>
+          <div className="h-64 bg-gray-50">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={usageTrend}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(date) => {
+                    const d = new Date(date);
+                    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}
+                />
+                <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  name="Usage Count" 
+                  stroke="#2A93FF" 
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="totalDiscount" 
+                  name="Total Discount" 
+                  stroke="#10B981" 
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="totalCommission" 
+                  name="Total Commission" 
+                  stroke="#8B5CF6" 
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
@@ -125,8 +186,41 @@ export default function ReportsPage() {
           <div className="p-4 border-b border-gray-100">
             <h2 className="text-lg font-medium text-gray-900">Top Agencies by Referrals</h2>
           </div>
-          <div className="h-64 bg-gray-50 flex items-center justify-center">
-            <p className="text-gray-500">Chart placeholder</p>
+          <div className="h-64 bg-gray-50">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={statistics?.topAgencies}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="agencyName" 
+                  tick={{ fontSize: 12 }}
+                  angle={-15}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}
+                />
+                <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                <Bar 
+                  dataKey="referralCount" 
+                  name="Referral Count" 
+                  fill="#2A93FF" 
+                  radius={[8, 8, 0, 0]}
+                />
+                <Bar 
+                  dataKey="totalCommission" 
+                  name="Total Commission" 
+                  fill="#8B5CF6" 
+                  radius={[8, 8, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

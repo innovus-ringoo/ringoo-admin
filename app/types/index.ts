@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongodb';
+
 // PromoCodeType defines the type of promo code
 export type PromoCodeType = 'user' | 'agency';
 
@@ -9,7 +11,8 @@ export type PromoCodeStatus = 'active' | 'inactive' | 'expired';
 
 // PromoCode represents a promo code in the system
 export interface PromoCode {
-  id: string;
+  _id?: ObjectId;
+  id?: string;
   code: string;
   type: PromoCodeType;
   discountType: DiscountType;
@@ -22,7 +25,7 @@ export interface PromoCode {
   validFrom: string;
   validUntil: string;
   status: PromoCodeStatus;
-  agencyId?: string; // for agency promo codes
+  agencyId?: ObjectId | string; // for agency promo codes
   agencyName?: string;
   commissionRate?: number; // commission percentage for agencies
   applicableNumbers?: string[]; // specific number prefixes or IDs
@@ -34,23 +37,25 @@ export interface PromoCode {
 
 // PromoCodeUsage tracks usage of promo codes by users
 export interface PromoCodeUsage {
-  id: string;
-  promoCodeId: string;
-  userId: string;
-  numberId: string; // the number purchased with this promo
-  discountAmount: number;
-  originalPrice: number;
-  finalPrice: number;
+  _id?: ObjectId;
+  id?: string;
+  promoCodeId?: ObjectId | string;
+  userId?: ObjectId | string;
+  numberId?: ObjectId | string; // the number purchased with this promo
+  discountAmount?: number;
+  originalPrice?: number;
+  finalPrice?: number;
   commissionAmount?: number; // for agency codes
-  agencyId?: string;
-  usedAt: string;
+  agencyId?: ObjectId | string;
+  usedAt?: Date | string;
 }
 
 // AgencyCommission tracks commission earned by marketing agencies
 export interface AgencyCommission {
-  id: string;
-  agencyId: string;
-  promoCodeId: string;
+  _id?: ObjectId;
+  id?: string;
+  agencyId: ObjectId | string;
+  promoCodeId: ObjectId | string;
   referralCount: number;
   totalCommission: number;
   pendingPayout: number;
@@ -59,11 +64,12 @@ export interface AgencyCommission {
 
 // Agency represents a marketing agency in the system
 export interface Agency {
-  id: string;
+  _id?: ObjectId;
+  id?: string;
   name: string;
   email: string;
-  promoCodeId: string; // Reference to promo_codes collection
-  promoCode: string; // For convenience, stores the promo code string
+  promoCodeId?: ObjectId | string; // Reference to promo_codes collection
+  promoCode?: string; // For convenience, stores the promo code string
   totalReferrals: number;
   totalEarnings: number;
   pendingPayout: number;
@@ -74,77 +80,13 @@ export interface Agency {
   updatedAt: string;
 }
 
-export interface PromoCode {
-  id: string;
-  code: string;
-  type: 'user' | 'agency';
-  discountType: 'percentage' | 'fixed';
-  discountValue: number;
-  maxDiscount?: number;
-  minPurchase?: number;
-  usageLimit?: number;
-  usageLimitPerUser?: number;
-  usageCount: number;
-  validFrom: string;
-  validUntil: string;
-  status: 'active' | 'inactive' | 'expired';
-  agencyId?: string;
-  agencyName?: string;
-  commissionRate?: number;
-  applicableNumbers?: string[];
-  isFirstPurchase?: boolean;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
+export interface CreateAgencyRequest {
+  name: string;
+  email: string;
+  commissionRate: number;
+  bankDetails?: string;
 }
 
-export interface AgencyCommission {
-  id: string;
-  agencyId: string;
-  promoCodeId: string;
-  referralCount: number;
-  totalCommission: number;
-  pendingPayout: number;
-  lastUpdatedAt: string;
-}
-
-
-
-// ValidatePromoCodeRequest represents a request to validate a promo code
-export interface ValidatePromoCodeRequest {
-  code: string;
-  price: number;
-  userId?: string;
-}
-
-// ValidatePromoCodeResponse represents the response from validating a promo code
-export interface ValidatePromoCodeResponse {
-  valid: boolean;
-  promoCode?: PromoCode;
-  discountAmount?: number;
-  finalPrice?: number;
-  error?: string;
-}
-
-// ApplyPromoCodeRequest represents a request to apply a promo code
-export interface ApplyPromoCodeRequest {
-  code: string;
-  price: number;
-  userId: string;
-  numberId: string;
-}
-
-// ApplyPromoCodeResponse represents the response from applying a promo code
-export interface ApplyPromoCodeResponse {
-  success: boolean;
-  promoCode?: PromoCode;
-  discountAmount?: number;
-  finalPrice?: number;
-  commissionAmount?: number;
-  error?: string;
-}
-
-// CreatePromoCodeRequest represents a request to create a promo code
 export interface CreatePromoCodeRequest {
   code: string;
   type: PromoCodeType;
@@ -156,7 +98,7 @@ export interface CreatePromoCodeRequest {
   usageLimitPerUser?: number;
   validFrom: string;
   validUntil: string;
-  status?: PromoCodeStatus;
+  status: PromoCodeStatus;
   agencyId?: string;
   agencyName?: string;
   commissionRate?: number;
@@ -165,16 +107,32 @@ export interface CreatePromoCodeRequest {
   description?: string;
 }
 
-// CreateAgencyRequest represents a request to create an agency
-export interface CreateAgencyRequest {
-  name: string;
-  email: string;
-  promoCodeId?: string;
-  promoCode?: string; // Optional, since it's generated internally
-  totalReferrals?: number;
-  totalEarnings?: number;
-  pendingPayout?: number;
-  commissionRate: number;
-  status?: string;
-  bankDetails?: string;
+export interface ValidatePromoCodeRequest {
+  code: string;
+  price: number;
+  userId?: string;
+}
+
+export interface ValidatePromoCodeResponse {
+  valid: boolean;
+  error?: string;
+  promoCode?: PromoCode;
+  discountAmount?: number;
+  finalPrice?: number;
+}
+
+export interface ApplyPromoCodeRequest {
+  code: string;
+  price: number;
+  userId: string;
+  numberId: string;
+}
+
+export interface ApplyPromoCodeResponse {
+  success: boolean;
+  error?: string;
+  promoCode?: PromoCode;
+  discountAmount?: number;
+  finalPrice?: number;
+  commissionAmount?: number;
 }
