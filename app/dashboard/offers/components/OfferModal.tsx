@@ -42,12 +42,14 @@ export default function OfferModal({ mode, offer }: OfferModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState(offer?.imageUrl || '');
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
+    setUploadError('');
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -57,11 +59,16 @@ export default function OfferModal({ mode, offer }: OfferModalProps) {
         body: formData,
       });
 
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Upload failed (${res.status})`);
+      }
 
       const { url } = await res.json();
       setImageUrl(url);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Image upload failed';
+      setUploadError(msg);
       console.error('Image upload failed:', error);
     } finally {
       setUploading(false);
@@ -230,6 +237,7 @@ export default function OfferModal({ mode, offer }: OfferModalProps) {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2A93FF] focus:border-transparent"
             />
             {uploading && <p className="text-sm text-gray-500 mt-1">Uploading...</p>}
+            {uploadError && <p className="text-sm text-red-500 mt-1">{uploadError}</p>}
           </div>
 
           <div>

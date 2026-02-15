@@ -71,6 +71,13 @@ export const updateOffer = async (id: string, updateData: Partial<CreateOfferReq
       : new Date(dateStr).toISOString();
   }
 
+  // Remove undefined values to avoid overwriting existing fields
+  Object.keys(processedData).forEach(key => {
+    if (processedData[key] === undefined) {
+      delete processedData[key];
+    }
+  });
+
   const result = await db
     .collection<Offer>(OFFERS_COLLECTION)
     .updateOne(
