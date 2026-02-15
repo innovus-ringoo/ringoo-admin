@@ -177,3 +177,41 @@ export interface UserListResponse {
   nextCursor?: string;
   hasNext: boolean;
 }
+
+// Offer types
+export type OfferType = 'banner' | 'promo' | 'announcement';
+export type Placement = 'home_top' | 'home_bottom' | 'calls_banner' | 'settings';
+
+export interface Offer {
+  _id?: ObjectId;
+  id?: string;
+  title: string;
+  description?: string;
+  type: OfferType;
+  placement: Placement;
+  imageUrl?: string;
+  ctaText?: string;
+  ctaLink?: string;
+  discountCode?: string;
+  priority: number;
+  isActive: boolean;
+  startDate?: string;
+  endDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOfferRequest {
+  title: string;
+  description?: string;
+  type: OfferType;
+  placement: Placement;
+  imageUrl?: string;
+  ctaText?: string;
+  ctaLink?: string;
+  discountCode?: string;
+  priority: number;
+  isActive: boolean;
+  startDate?: string;
+  endDate?: string;
+}
