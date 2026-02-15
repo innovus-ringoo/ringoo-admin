@@ -54,12 +54,21 @@ export default function TopNavigation() {
         </div>  <div className="flex gap-1">
           <Link
             href="/dashboard"
-            className={`px-3 py-2 transition-colors ${isActive('/dashboard') && !isActive('/dashboard/agencies') && !isActive('/dashboard/reports') && !isActive('/dashboard/users')
+            className={`px-3 py-2 transition-colors ${isActive('/dashboard') && !isActive('/dashboard/agencies') && !isActive('/dashboard/reports') && !isActive('/dashboard/users') && !isActive('/dashboard/offers')
               ? 'bg-white text-primary'
               : 'text-white hover:text-[#2A93FF] hover:bg-white'
               }`}
           >
             Promo Codes
+          </Link>
+          <Link
+            href="/dashboard/offers"
+            className={`px-3 py-2 transition-colors ${isActive('/dashboard/offers')
+              ? 'bg-white text-primary'
+              : 'text-white hover:text-[#2A93FF] hover:bg-white'
+              }`}
+          >
+            Offers
           </Link>
           <Link
             href="/dashboard/agencies"
