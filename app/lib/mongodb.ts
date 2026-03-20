@@ -1,7 +1,7 @@
 import { MongoClient } from 'mongodb';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://innovusllc024_db_user:zme9!9giz!MzFtu@ringoo.uc4u6ld.mongodb.net/';
-const MONGODB_DATABASE = process.env.MONGODB_DATABASE || 'dev';
+const MONGODB_DATABASE =  'prod';
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;

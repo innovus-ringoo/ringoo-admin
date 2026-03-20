@@ -201,6 +201,24 @@ export interface Offer {
   updatedAt: string;
 }
 
+// RepurchaseRequest types
+export type BillingCycleType = 'monthly' | 'quarterly' | 'annually';
+export type RepurchaseStatus = 'pending' | 'accepted' | 'rejected';
+
+export interface RepurchaseRequest {
+  id?: string;
+  userId: string;
+  numberId: string;
+  number: string;
+  monthlyPrice: string;
+  billingCycle: BillingCycleType;
+  autoRenew: boolean;
+  status: RepurchaseStatus;
+  adminNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CreateOfferRequest {
   title: string;
   description?: string;

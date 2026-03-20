@@ -7,7 +7,8 @@ import {
   PromoCodeUsage,
   User,
   MongoDBUser,
-  MongoDBUserQuery
+  MongoDBUserQuery,
+  RepurchaseRequest
 } from '../types';
 
 // Collection names
@@ -450,4 +451,33 @@ export const getUsers = async (limit: number = 10, cursor?: string, search?: str
     nextCursor,
     hasNext,
   };
+};
+
+// RepurchaseRequest Operations
+const REPURCHASE_REQUESTS_COLLECTION = 'repurchase_requests';
+
+export const getRepurchaseRequests = async (): Promise<RepurchaseRequest[]> => {
+  const db = await getDatabase();
+  const docs = await db
+    .collection(REPURCHASE_REQUESTS_COLLECTION)
+    .find({})
+    .sort({ created_at: -1 })
+    .toArray();
+
+  return docs.map(doc => {
+    const { _id, ...rest } = doc;
+    return {
+      id: _id.toString(),
+      userId: rest.user_id?.toString() ?? '',
+      numberId: rest.number_id?.toString() ?? '',
+      number: rest.number ?? '',
+      monthlyPrice: rest.monthly_price ?? '',
+      billingCycle: rest.billing_cycle ?? 'monthly',
+      autoRenew: rest.auto_renew ?? false,
+      status: rest.status ?? 'pending',
+      adminNote: rest.admin_note,
+      createdAt: rest.created_at ? new Date(rest.created_at).toISOString() : '',
+      updatedAt: rest.updated_at ? new Date(rest.updated_at).toISOString() : '',
+    } as RepurchaseRequest;
+  });
 };
