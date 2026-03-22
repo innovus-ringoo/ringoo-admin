@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getUsersAction } from '../../actions/users';
 import { User, UserListResponse } from '../../types';
+import SendNotificationModal from './components/SendNotificationModal';
 
 // Debounce hook
 const useDebounce = (value: string, delay: number = 300) => {
@@ -31,6 +32,7 @@ export default function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [searchLoading, setSearchLoading] = useState(false);
+  const [notificationUser, setNotificationUser] = useState<User | null>(null);
 
   // Debounce search term with 300ms delay
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -132,6 +134,9 @@ export default function UsersPage() {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Admin
                 </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody className="">
@@ -165,6 +170,17 @@ export default function UsersPage() {
                       }`}>
                       {user.isAdmin ? 'Yes' : 'No'}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => setNotificationUser(user)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      Notify
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -204,6 +220,13 @@ export default function UsersPage() {
           )}
         </div>
       </div>
+      {notificationUser && (
+        <SendNotificationModal
+          isOpen={!!notificationUser}
+          onClose={() => setNotificationUser(null)}
+          user={{ id: notificationUser.id, name: notificationUser.name, email: notificationUser.email }}
+        />
+      )}
     </div>
   );
 }

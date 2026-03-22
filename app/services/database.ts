@@ -7,7 +7,8 @@ import {
   PromoCodeUsage,
   User,
   MongoDBUser,
-  MongoDBUserQuery
+  MongoDBUserQuery,
+  RepurchaseRequest
 } from '../types';
 
 // Collection names
@@ -450,4 +451,129 @@ export const getUsers = async (limit: number = 10, cursor?: string, search?: str
     nextCursor,
     hasNext,
   };
+};
+
+// Acquired Numbers & Wallet Operations
+const ACQUIRED_NUMBERS_COLLECTION = 'acquired_numbers';
+const WALLETS_COLLECTION = 'wallets';
+const WALLET_TRANSACTIONS_COLLECTION = 'wallet_transactions';
+
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
+
+const billingCycleMonths: Record<string, number> = {
+  monthly: 1,
+  quarterly: 3,
+  annually: 12,
+};
+
+export const activateAcquiredNumber = async (
+  numberId: string,
+  billingCycle: string,
+  monthlyPrice: string
+): Promise<boolean> => {
+  const db = await getDatabase();
+  const months = billingCycleMonths[billingCycle] ?? 1;
+  const nextBillingDate = addMonths(new Date(), months);
+
+  const result = await db.collection(ACQUIRED_NUMBERS_COLLECTION).updateOne(
+    { _id: new ObjectId(numberId) },
+    {
+      $set: {
+        status: 'Active',
+        next_billing_date: nextBillingDate,
+        billing_cycle: billingCycle,
+        monthly_price: monthlyPrice,
+        released_at: null,
+        updated_at: new Date(),
+      },
+    }
+  );
+  return result.modifiedCount === 1;
+};
+
+export const deductWalletBalance = async (
+  userId: string,
+  amount: number,
+  description: string,
+  referenceId: string
+): Promise<{ success: boolean; error?: string }> => {
+  const db = await getDatabase();
+  const userObjectId = new ObjectId(userId);
+
+  const wallet = await db.collection(WALLETS_COLLECTION).findOne({ user_id: userObjectId });
+  if (!wallet) return { success: false, error: 'Wallet not found' };
+
+  const balance = typeof wallet.balance === 'number' ? wallet.balance : parseFloat(wallet.balance ?? '0');
+  if (balance < amount) {
+    return { success: false, error: `Insufficient wallet balance (available: ${balance.toFixed(2)})` };
+  }
+
+  await db.collection(WALLETS_COLLECTION).updateOne(
+    { user_id: userObjectId },
+    { $inc: { balance: -amount }, $set: { updated_at: new Date() } }
+  );
+
+  await db.collection(WALLET_TRANSACTIONS_COLLECTION).insertOne({
+    user_id: userObjectId,
+    type: 'debit',
+    amount,
+    description,
+    reference_id: referenceId,
+    reference_type: 'repurchase_request',
+    created_at: new Date(),
+  });
+
+  return { success: true };
+};
+
+// RepurchaseRequest Operations
+const REPURCHASE_REQUESTS_COLLECTION = 'repurchase_requests';
+
+export const updateRepurchaseRequestStatus = async (
+  id: string,
+  status: 'accepted' | 'rejected',
+  adminNote?: string
+): Promise<boolean> => {
+  const db = await getDatabase();
+  const result = await db.collection(REPURCHASE_REQUESTS_COLLECTION).updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        status,
+        ...(adminNote !== undefined ? { admin_note: adminNote } : {}),
+        updated_at: new Date(),
+      },
+    }
+  );
+  return result.modifiedCount === 1;
+};
+
+export const getRepurchaseRequests = async (): Promise<RepurchaseRequest[]> => {
+  const db = await getDatabase();
+  const docs = await db
+    .collection(REPURCHASE_REQUESTS_COLLECTION)
+    .find({})
+    .sort({ created_at: -1 })
+    .toArray();
+
+  return docs.map(doc => {
+    const { _id, ...rest } = doc;
+    return {
+      id: _id.toString(),
+      userId: rest.user_id?.toString() ?? '',
+      numberId: rest.number_id?.toString() ?? '',
+      number: rest.number ?? '',
+      monthlyPrice: rest.monthly_price ?? '',
+      billingCycle: rest.billing_cycle ?? 'monthly',
+      autoRenew: rest.auto_renew ?? false,
+      status: rest.status ?? 'pending',
+      adminNote: rest.admin_note,
+      createdAt: rest.created_at ? new Date(rest.created_at).toISOString() : '',
+      updatedAt: rest.updated_at ? new Date(rest.updated_at).toISOString() : '',
+    } as RepurchaseRequest;
+  });
 };

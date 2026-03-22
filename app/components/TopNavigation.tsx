@@ -54,7 +54,7 @@ export default function TopNavigation() {
         </div>  <div className="flex gap-1">
           <Link
             href="/dashboard"
-            className={`px-3 py-2 transition-colors ${isActive('/dashboard') && !isActive('/dashboard/agencies') && !isActive('/dashboard/reports') && !isActive('/dashboard/users') && !isActive('/dashboard/offers')
+            className={`px-3 py-2 transition-colors ${isActive('/dashboard') && !isActive('/dashboard/agencies') && !isActive('/dashboard/reports') && !isActive('/dashboard/users') && !isActive('/dashboard/offers') && !isActive('/dashboard/requests')
               ? 'bg-white text-primary'
               : 'text-white hover:text-[#2A93FF] hover:bg-white'
               }`}
@@ -95,6 +95,15 @@ export default function TopNavigation() {
               }`}
           >
             Reports
+          </Link>
+          <Link
+            href="/dashboard/requests"
+            className={`px-3 py-2 transition-colors ${isActive('/dashboard/requests')
+              ? 'bg-white text-primary'
+              : 'text-white hover:text-[#2A93FF] hover:bg-white'
+              }`}
+          >
+            Requests
           </Link>
 
         </div>
