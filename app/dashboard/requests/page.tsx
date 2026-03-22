@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getRepurchaseRequestsAction } from '../../actions/repurchaseRequests';
+import { getRepurchaseRequestsAction, updateRepurchaseRequestAction } from '../../actions/repurchaseRequests';
 import { RepurchaseRequest } from '../../types';
 
 export default function RequestsPage() {
   const [requests, setRequests] = useState<RepurchaseRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<{ id: string; message: string } | null>(null);
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -22,6 +24,20 @@ export default function RequestsPage() {
     };
     fetchRequests();
   }, []);
+
+  const handleStatusUpdate = async (id: string, status: 'accepted' | 'rejected') => {
+    setActionLoading(`${id}-${status}`);
+    setActionError(null);
+    const result = await updateRepurchaseRequestAction(id, status);
+    if (result.success) {
+      setRequests((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status } : r))
+      );
+    } else {
+      setActionError({ id, message: result.error || 'Failed to update request' });
+    }
+    setActionLoading(null);
+  };
 
   const statusColor = (status: string) => {
     if (status === 'accepted') return 'bg-green-100 text-green-800';
@@ -55,6 +71,7 @@ export default function RequestsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admin Note</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested At</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -72,6 +89,41 @@ export default function RequestsPage() {
                   <td className="px-6 py-4 text-sm text-gray-500">{req.adminNote || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {req.status === 'pending' ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleStatusUpdate(req.id!, 'accepted')}
+                            disabled={!!actionLoading}
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {actionLoading === `${req.id}-accepted` ? (
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+                            ) : (
+                              'Accept'
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleStatusUpdate(req.id!, 'rejected')}
+                            disabled={!!actionLoading}
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {actionLoading === `${req.id}-rejected` ? (
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+                            ) : (
+                              'Reject'
+                            )}
+                          </button>
+                        </div>
+                        {actionError?.id === req.id && (
+                          <p className="text-xs text-red-600 max-w-[180px]">{actionError?.message}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </td>
                 </tr>
               ))}
