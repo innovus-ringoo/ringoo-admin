@@ -233,3 +233,36 @@ export interface CreateOfferRequest {
   startDate?: string;
   endDate?: string;
 }
+
+export interface InvoiceItem {
+  id: string; // The transaction ID this item comes from
+  date: string;
+  description: string;
+  amount: number;
+  type: string; 
+}
+
+export interface InvoiceData {
+  _id?: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  invoiceId: string; // e.g. INV-XXXXXX
+  date: string; // Generation date
+  transactionIds: string[]; // List of tracked wallet_transactions
+  items: InvoiceItem[];
+  totalAmount: number;
+  status: 'Paid' | 'Pending';
+}
+
+export interface WalletTransactionUI {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  type: string; // debit/credit
+  referenceType: string;
+  invoiced: boolean;
+  invoiceId?: string;
+}
+

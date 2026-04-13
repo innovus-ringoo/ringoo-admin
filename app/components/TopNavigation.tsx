@@ -23,7 +23,7 @@ export default function TopNavigation() {
 
   return (
     <nav className="bg-primary border-b border-gray-100">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-6xl mx-auto px-4">
         <div className="flex justify-between items-center h-20">
           {/* Logo and Brand */}
           <div className="flex items-center gap-6">
