@@ -20,14 +20,14 @@ export async function sendUserNotificationAction(
     const db = await getDatabase();
     const user = await db.collection('users').findOne(
       { _id: new ObjectId(userId) },
-      { projection: { fcm_tokens: 1 , apns_tokens: 1 } }
+      { projection: { fcm_tokens: 1 } }
     );
 
     if (!user) {
       return { success: false, error: 'User not found' };
     }
 
-    const tokens: string[] = ([...user.fcm_tokens, ...user.apns_tokens] as { token: string }[])
+    const tokens: string[] = (user.fcm_tokens || [])
       .map((t: { token: string }) => t.token)
       .filter(Boolean);
 
