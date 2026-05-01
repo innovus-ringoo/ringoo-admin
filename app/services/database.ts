@@ -453,6 +453,27 @@ export const getUsers = async (limit: number = 10, cursor?: string, search?: str
   };
 };
 
+export const getUserById = async (id: string): Promise<User | null> => {
+  const db = await getDatabase();
+  const user = await db
+    .collection<MongoDBUser>(USERS_COLLECTION)
+    .findOne({ _id: new ObjectId(id) });
+
+  if (!user) return null;
+
+  return {
+    id: user._id.toString(),
+    email: user.email || '',
+    name: user.username || '',
+    phone: user.phone_number || '',
+    status: 'active', // Default status
+    createdAt: user.created_at ? String(user.created_at) : '',
+    updatedAt: user.updated_at ? String(user.updated_at) : '',
+    lastLogin: '', // Not available in current data structure
+    isAdmin: user.role === 'admin',
+  };
+};
+
 // Acquired Numbers & Wallet Operations
 const ACQUIRED_NUMBERS_COLLECTION = 'acquired_numbers';
 const WALLETS_COLLECTION = 'wallets';

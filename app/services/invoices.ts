@@ -4,6 +4,7 @@ import { InvoiceData, InvoiceItem, WalletTransactionUI } from '../types';
 
 const WALLET_TRANSACTIONS_COLLECTION = 'wallet_transactions';
 const USERS_COLLECTION = 'users';
+const INVOICES_COLLECTION = 'invoices';
 
 export const getUserWalletTransactions = async (userId: string): Promise<WalletTransactionUI[]> => {
   const db = await getDatabase();
@@ -73,5 +74,43 @@ export const getInvoiceForTransaction = async (userId: string, transactionId: st
     items: [item],
     totalAmount: amount,
     status: 'Paid'
+  };
+};
+
+export const saveInvoice = async (invoiceData: Omit<InvoiceData, '_id'>): Promise<string> => {
+  const db = await getDatabase();
+
+  const invoiceDocument = {
+    ...invoiceData,
+    created_at: new Date(),
+    updated_at: new Date(),
+  };
+
+  const result = await db.collection(INVOICES_COLLECTION).insertOne(invoiceDocument);
+  return result.insertedId.toString();
+};
+
+export const getInvoiceById = async (invoiceId: string): Promise<InvoiceData | null> => {
+  const db = await getDatabase();
+
+  const invoice = await db.collection(INVOICES_COLLECTION).findOne({
+    invoiceId: invoiceId
+  });
+
+  if (!invoice) return null;
+
+  return {
+    _id: invoice._id.toString(),
+    userId: invoice.userId,
+    userName: invoice.userName,
+    userEmail: invoice.userEmail,
+    invoiceId: invoice.invoiceId,
+    date: invoice.date,
+    billingPeriod: invoice.billingPeriod,
+    transactionIds: invoice.transactionIds,
+    items: invoice.items,
+    categorizedItems: invoice.categorizedItems,
+    totalAmount: invoice.totalAmount,
+    status: invoice.status,
   };
 };

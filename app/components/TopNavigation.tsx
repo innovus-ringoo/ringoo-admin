@@ -105,6 +105,15 @@ export default function TopNavigation() {
           >
             Requests
           </Link>
+          <Link
+            href="/dashboard/invoices"
+            className={`px-3 py-2 transition-colors ${isActive('/dashboard/invoices')
+              ? 'bg-white text-primary'
+              : 'text-white hover:text-[#2A93FF] hover:bg-white'
+              }`}
+          >
+            Invoices
+          </Link>
 
         </div>
       </div>
