@@ -239,7 +239,13 @@ export interface InvoiceItem {
   date: string;
   description: string;
   amount: number;
-  type: string; 
+  type: string;
+}
+
+export interface CategorizedInvoiceItem {
+  category: 'subscription_fee' | 'purchase_number' | 'call_usages' | 'sms_usages';
+  description: string;
+  amount: number;
 }
 
 export interface InvoiceData {
@@ -249,10 +255,12 @@ export interface InvoiceData {
   userEmail: string;
   invoiceId: string; // e.g. INV-XXXXXX
   date: string; // Generation date
+  billingPeriod?: string; // YYYY-MM format
   transactionIds: string[]; // List of tracked wallet_transactions
-  items: InvoiceItem[];
+  items: InvoiceItem[]; // Legacy support for individual items
+  categorizedItems?: CategorizedInvoiceItem[]; // New categorized summary
   totalAmount: number;
-  status: 'Paid' | 'Pending';
+  status?: 'Paid' | 'Pending';
 }
 
 export interface WalletTransactionUI {

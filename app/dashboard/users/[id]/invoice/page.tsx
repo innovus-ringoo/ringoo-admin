@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getUserWalletTransactionsAction } from '../../../../actions/invoices';
-import { WalletTransactionUI } from '../../../../types';
+import { getUserWalletTransactionsAction, saveInvoiceAction } from '../../../../actions/invoices';
+import { getUserByIdAction } from '../../../../actions/users';
+import { WalletTransactionUI, User, CategorizedInvoiceItem } from '../../../../types';
 
 export default function UserTransactionsPage() {
   const params = useParams();
@@ -11,8 +12,11 @@ export default function UserTransactionsPage() {
   const userId = params.id as string;
   
   const [transactions, setTransactions] = useState<WalletTransactionUI[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [savingInvoice, setSavingInvoice] = useState(false);
+  const [invoiceSaved, setInvoiceSaved] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Set<string>>(new Set());
   
   // Date filter by month (format YYYY-MM) - defaults to current month
@@ -23,23 +27,35 @@ export default function UserTransactionsPage() {
   // Invoice mode
   const [showInvoice, setShowInvoice] = useState(false);
 
-  const fetchTransactions = async () => {
+  const fetchUser = useCallback(async () => {
+    try {
+      const userData = await getUserByIdAction(userId);
+      setUser(userData);
+    } catch(err: unknown) {
+      console.error('Failed to fetch user:', err);
+    }
+  }, [userId]);
+
+  const fetchTransactions = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getUserWalletTransactionsAction(userId);
       setTransactions(data);
-    } catch(err: any) {
-      setError(err.message || 'Failed to fetch user transactions');
+    } catch(err: unknown) {
+      setError((err as Error).message || 'Failed to fetch user transactions');
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     if (userId) {
+      fetchUser();
       fetchTransactions();
     }
-  }, [userId]);
+  }, [userId, fetchUser, fetchTransactions]);
+
+
 
   // Filter transactions by month
   const filteredTransactions = useMemo(() => {
@@ -74,6 +90,99 @@ export default function UserTransactionsPage() {
     return selectedItems.reduce((sum, item) => sum + item.amount, 0);
   }, [selectedItems]);
 
+  // Calculate category totals
+  const categoryTotals = useMemo(() => {
+    const totals = {
+      subscriptionFee: 0, // Always 0
+      purchaseNumber: 0,
+      callUsages: 0,
+      smsUsages: 0,
+    };
+
+    selectedItems.forEach((item) => {
+      // Check description and referenceType to categorize
+      const desc = item.description.toLowerCase();
+      const refType = item.referenceType?.toLowerCase() || '';
+
+      if (desc.includes('number') && (desc.includes('purchase') || desc.includes('acquire'))) {
+        totals.purchaseNumber += item.amount;
+      } else if (refType === 'call' || desc.includes('call')) {
+        totals.callUsages += item.amount;
+      } else if (refType === 'sms' || desc.includes('sms')) {
+        totals.smsUsages += item.amount;
+      }
+      // Subscription fee remains 0
+    });
+
+    return totals;
+  }, [selectedItems]);
+
+  // Save invoice when showInvoice becomes true
+  useEffect(() => {
+    if (showInvoice && !invoiceSaved && !savingInvoice && selectedItems.length > 0) {
+      const saveInvoiceToDb = async () => {
+        setSavingInvoice(true);
+        try {
+          const now = new Date();
+          const invoiceNumber = `INV-${userId.substring(0,6).toUpperCase()}-${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}`;
+
+          const categorizedItems: CategorizedInvoiceItem[] = [
+            {
+              category: 'subscription_fee',
+              description: 'Subscription Monthly Fee',
+              amount: 0,
+            },
+            {
+              category: 'purchase_number',
+              description: 'Number Purchase Number Acquisition',
+              amount: categoryTotals.purchaseNumber,
+            },
+            {
+              category: 'call_usages',
+              description: 'Call Service Call Minutes/Hours',
+              amount: categoryTotals.callUsages,
+            },
+            {
+              category: 'sms_usages',
+              description: 'SMS Service SMS Count',
+              amount: categoryTotals.smsUsages,
+            },
+          ];
+
+          const invoiceData = {
+            userId,
+            userName: user?.name || 'User',
+            userEmail: user?.email || '',
+            invoiceId: invoiceNumber,
+            date: now.toISOString(),
+            billingPeriod: selectedMonth || undefined,
+            transactionIds: selectedItems.map(item => item.id),
+            items: selectedItems, // Keep legacy items for backward compatibility
+            categorizedItems,
+            totalAmount: totalAmount,
+            status: undefined,
+          };
+
+          await saveInvoiceAction(invoiceData);
+          setInvoiceSaved(true);
+        } catch (err: unknown) {
+          console.error('Failed to save invoice:', err);
+        } finally {
+          setSavingInvoice(false);
+        }
+      };
+
+      saveInvoiceToDb();
+    }
+  }, [showInvoice, invoiceSaved, savingInvoice, selectedItems, categoryTotals, totalAmount, userId, user, selectedMonth]);
+
+  // Reset saved state when invoice is closed
+  useEffect(() => {
+    if (!showInvoice) {
+      setInvoiceSaved(false);
+    }
+  }, [showInvoice]);
+
   const handlePrint = () => {
     window.print();
   };
@@ -81,7 +190,9 @@ export default function UserTransactionsPage() {
   if (showInvoice) {
     const now = new Date();
     const invoiceNumber = `INV-${userId.substring(0,6).toUpperCase()}-${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}`;
-    
+
+  
+
     // Attempt to extract userName and email from the first item or fallback.
     // Notice: our WalletTransactionUI doesn't have userName, so we just label it generic or fetch it.
     // We already have generic "User" placeholders since we didn't fetch the user doc directly here.
@@ -124,25 +235,20 @@ export default function UserTransactionsPage() {
               <p className="text-gray-500 mt-1">Invoice #{invoiceNumber}</p>
             </div>
             <div className="text-right text-gray-500">
-              <p className="font-semibold text-gray-900">Ringoo Admin</p>
-              <p>123 Communication St.</p>
-              <p>Tech City, TC 12345</p>
+              <p className="font-semibold text-gray-900">Ringoo Communication</p>
+              <p>24880 Myers Glen Place</p>
+              <p>Chantilly, VA 20152</p>
             </div>
           </div>
 
           <div className="flex justify-between items-end mb-8">
             <div className="text-gray-600">
               <p className="mb-1 text-sm font-semibold text-gray-500 uppercase">Bill To:</p>
-              <p className="text-sm mt-1">User ID: {userId}</p>
+              <p className="text-sm mt-1">{user?.name || 'User'}</p>
               {selectedMonth && <p className="text-sm mt-1">Billing Period: {selectedMonth}</p>}
             </div>
             <div className="text-right text-gray-600">
-              <p><span className="font-semibold">Generation Date:</span> {now.toLocaleDateString()}</p>
-              <p><span className="font-semibold">Status:</span> 
-                <span className="ml-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Paid
-                </span>
-              </p>
+              <p><span className="font-semibold">Invoice Date:</span> {now.toLocaleDateString()}</p>
             </div>
           </div>
 
@@ -150,29 +256,40 @@ export default function UserTransactionsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usages Details</th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {selectedItems.map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(item.date).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <span className="capitalize">{item.type.replace(/_/g, ' ')}</span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {item.description}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      ${item.amount.toFixed(4)}
-                    </td>
-                  </tr>
-                ))}
+                <tr>
+                  <td className="px-6 py-4 text-sm text-gray-900">Subscription</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">Monthly Fee</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    $0.0000
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 text-sm text-gray-900">Number Purchase</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">Number Acquisition</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    ${categoryTotals.purchaseNumber.toFixed(4)}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 text-sm text-gray-900">Call Service</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">Call Minutes/Hours</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    ${categoryTotals.callUsages.toFixed(4)}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 text-sm text-gray-900">SMS Service</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">SMS Count</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                    ${categoryTotals.smsUsages.toFixed(4)}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -267,7 +384,7 @@ export default function UserTransactionsPage() {
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service and Usages Details</th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
               </tr>
             </thead>
