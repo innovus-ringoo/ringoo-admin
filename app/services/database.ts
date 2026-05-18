@@ -524,18 +524,30 @@ export const deductWalletBalance = async (
 ): Promise<{ success: boolean; error?: string }> => {
   const db = await getDatabase();
   const userObjectId = new ObjectId(userId);
-
-  const wallet = await db.collection(WALLETS_COLLECTION).findOne({ user_id: userObjectId });
+ 
+  const wallet = await db.collection(WALLETS_COLLECTION).findOne({
+    $or: [{ user_id: userObjectId }, { user_id: userId }]
+  });
   if (!wallet) return { success: false, error: 'Wallet not found' };
 
-  const balance = typeof wallet.balance === 'number' ? wallet.balance : parseFloat(wallet.balance ?? '0');
+  // Support both 'balance' (dollars) and 'balance_cents'
+  let balance: number;
+  if (typeof wallet.balance_cents === 'number') {
+    balance = wallet.balance_cents / 100;
+  } else if (typeof wallet.balance === 'number') {
+    balance = wallet.balance;
+  } else {
+    balance = parseFloat(wallet.balance ?? '0');
+  }
   if (balance < amount) {
     return { success: false, error: `Insufficient wallet balance (available: ${balance.toFixed(2)})` };
   }
 
+  const updateField = typeof wallet.balance_cents === 'number' ? 'balance_cents' : 'balance';
+  const updateAmount = typeof wallet.balance_cents === 'number' ? amount * 100 : amount;
   await db.collection(WALLETS_COLLECTION).updateOne(
-    { user_id: userObjectId },
-    { $inc: { balance: -amount }, $set: { updated_at: new Date() } }
+    { $or: [{ user_id: userObjectId }, { user_id: userId }] },
+    { $inc: { [updateField]: -updateAmount }, $set: { updated_at: new Date() } }
   );
 
   await db.collection(WALLET_TRANSACTIONS_COLLECTION).insertOne({
